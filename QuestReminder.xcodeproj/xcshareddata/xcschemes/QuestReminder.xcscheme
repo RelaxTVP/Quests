@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "47F1F2762F3BA456006BBFE6"
-               BuildableName = "Quests..app"
-               BlueprintName = "Quests."
-               ReferencedContainer = "container:Quests..xcodeproj">
+               BuildableName = "QuestReminder.app"
+               BlueprintName = "QuestReminder"
+               ReferencedContainer = "container:QuestReminder.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -34,6 +34,7 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      storeKitConfigurationFile = "Quests./QuestReminder.storekit"
       language = "pt-PT"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
@@ -46,9 +47,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "47F1F2762F3BA456006BBFE6"
-            BuildableName = "Quests..app"
-            BlueprintName = "Quests."
-            ReferencedContainer = "container:Quests..xcodeproj">
+            BuildableName = "QuestReminder.app"
+            BlueprintName = "QuestReminder"
+            ReferencedContainer = "container:QuestReminder.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -63,9 +64,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "47F1F2762F3BA456006BBFE6"
-            BuildableName = "Quests..app"
-            BlueprintName = "Quests."
-            ReferencedContainer = "container:Quests..xcodeproj">
+            BuildableName = "QuestReminder.app"
+            BlueprintName = "QuestReminder"
+            ReferencedContainer = "container:QuestReminder.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

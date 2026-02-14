@@ -19,13 +19,102 @@ extension QuestType {
     }
 }
 
+enum QuestRecurrence: String, CaseIterable, Identifiable, Codable {
+    case none = "quest_repeat_none"
+    case daily = "quest_repeat_daily"
+    case weekly = "quest_repeat_weekly"
+
+    var id: String { rawValue }
+
+    var localized: String {
+        NSLocalizedString(rawValue, comment: "")
+    }
+
+    var requiresPremium: Bool {
+        switch self {
+        case .none, .daily:
+            return false
+        case .weekly:
+            return true
+        }
+    }
+}
+
+enum QuestIcon: String, CaseIterable, Identifiable, Codable {
+    case flame = "flame.fill"
+    case star = "star.fill"
+    case bolt = "bolt.fill"
+    case book = "book.fill"
+    case trophy = "trophy.fill"
+    case leaf = "leaf.fill"
+
+    var id: String { rawValue }
+
+    var symbolName: String { rawValue }
+
+    var requiresPremium: Bool {
+        self != .flame
+    }
+
+    var titleKey: String {
+        switch self {
+        case .flame:
+            return "quest_icon_flame"
+        case .star:
+            return "quest_icon_star"
+        case .bolt:
+            return "quest_icon_bolt"
+        case .book:
+            return "quest_icon_book"
+        case .trophy:
+            return "quest_icon_trophy"
+        case .leaf:
+            return "quest_icon_leaf"
+        }
+    }
+}
+
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+
+    var titleKey: String {
+        switch self {
+        case .system:
+            return "theme_system"
+        case .light:
+            return "theme_light"
+        case .dark:
+            return "theme_dark"
+        }
+    }
+}
+
 struct AppQuest: Identifiable, Codable {
     var id: UUID = UUID()
     var title: String
     var type: QuestType
     var notes: String = ""
+    var scheduledDate: Double? = nil // start-of-day timestamp
+    var recurrence: QuestRecurrence = .none
+    var icon: QuestIcon = .flame
     var completed: Bool = false
     var archived: Bool = false
+    var deleted: Bool = false
     var completedAt: Double? = nil // timestamp
 
 }
@@ -33,13 +122,31 @@ struct AppQuest: Identifiable, Codable {
 struct ContentView: View {
     
     @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var purchaseManager: PurchaseManager
 
     enum SidebarItem: Hashable {
-        case home, archive, settings, bug
+        case home, archive, deleted, settings, bug
+    }
+    enum HomeTab: Hashable {
+        case quests, calendar
+    }
+    enum PlannerFilter: String, CaseIterable, Identifiable {
+        case all = "planner_filter_all"
+        case daily = "planner_filter_daily"
+        case weekly = "planner_filter_weekly"
+        case pending = "planner_filter_pending"
+        case completed = "planner_filter_completed"
+
+        var id: String { rawValue }
     }
     private var isPhone: Bool { UIDevice.current.userInterfaceIdiom == .phone }
     @State private var phonePath: [SidebarItem] = []
     @State private var didAutoOpenHome = false
+    @State private var selectedHomeTab: HomeTab = .quests
+    @State private var planningDate: Date = Calendar.current.startOfDay(for: Date())
+    @State private var addQuestDefaultDate: Date? = Calendar.current.startOfDay(for: Date())
+    @State private var plannerFilter: PlannerFilter = .all
+    @State private var showPremiumSheet = false
 
 
     @State private var selectedItem: SidebarItem = .home
@@ -58,6 +165,7 @@ struct ContentView: View {
     
     @AppStorage("dailyStreak") private var dailyStreak: Int = 0
     @AppStorage("weeklyStreak") private var weeklyStreak: Int = 0
+    @AppStorage("appearanceMode") private var appearanceMode: String = AppearanceMode.system.rawValue
 
     @AppStorage("lastDailyCompletion") private var lastDailyCompletionTime: Double = 0
     @AppStorage("lastWeeklyCompletion") private var lastWeeklyCompletionTime: Double = 0
@@ -122,6 +230,12 @@ struct ContentView: View {
                 Label(NSLocalizedString("menu_archive", comment: ""), systemImage: "archivebox")
             }
 
+            Button {
+                phonePath = [.deleted]
+            } label: {
+                Label(NSLocalizedString("menu_deleted", comment: ""), systemImage: "trash")
+            }
+
             Section {
                 Button {
                     phonePath = [.settings]
@@ -136,6 +250,8 @@ struct ContentView: View {
                 }
             }
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
     }
 
 
@@ -149,6 +265,7 @@ struct ContentView: View {
                             switch item {
                             case .home: homeView
                             case .archive: archiveView
+                            case .deleted: deletedView
                             case .settings: settingsView
                             case .bug: bugReportView
                             }
@@ -182,7 +299,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showAddQuest) {
-            UpsertQuestView { newQuest in store.add(newQuest) }
+            UpsertQuestView(defaultDate: addQuestDefaultDate) { newQuest in store.add(newQuest) }
         }
         .sheet(item: $editingQuest) { original in
             UpsertQuestView(quest: original) { updated in
@@ -221,6 +338,13 @@ struct ContentView: View {
                     Label(NSLocalizedString("menu_archive", comment: ""), systemImage: "archivebox")
                 }
 
+                Button {
+                    selectedItem = .deleted
+                    dismiss()
+                } label: {
+                    Label(NSLocalizedString("menu_deleted", comment: ""), systemImage: "trash")
+                }
+
                 Section {
                     Button {
                         selectedItem = .settings
@@ -238,6 +362,8 @@ struct ContentView: View {
                 }
             }
             .navigationTitle(Text(NSLocalizedString("menu_title", comment: "")))
+            .buttonStyle(.plain)
+            .foregroundStyle(.primary)
         }
     }
 
@@ -247,6 +373,7 @@ struct ContentView: View {
         switch selectedItem {
         case .home: homeView
         case .archive: archiveView
+        case .deleted: deletedView
         case .settings: settingsView
         case .bug: bugReportView
         }
@@ -257,6 +384,7 @@ struct ContentView: View {
         List {
             sidebarButton(.home, titleKey: "menu_home", systemImage: "house")
             sidebarButton(.archive, titleKey: "menu_archive", systemImage: "archivebox")
+            sidebarButton(.deleted, titleKey: "menu_deleted", systemImage: "trash")
 
             Section {
                 sidebarButton(.settings, titleKey: "menu_settings", systemImage: "gear")
@@ -280,18 +408,48 @@ struct ContentView: View {
    
 
     private var settingsView: some View {
-        Text("Settings (em breve)")
-            .navigationTitle("Settings")
+        Form {
+            Section(LocalizedStringKey("settings_appearance")) {
+                Picker(LocalizedStringKey("settings_theme"), selection: $appearanceMode) {
+                    ForEach(AppearanceMode.allCases) { mode in
+                        Text(LocalizedStringKey(mode.titleKey)).tag(mode.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            if purchaseManager.isPaywallEnabled {
+                Section(LocalizedStringKey("premium_section_title")) {
+                    HStack {
+                        Text(LocalizedStringKey("premium_lifetime_label"))
+                        Spacer()
+                        Text(purchaseManager.isPremiumUnlocked ? LocalizedStringKey("premium_unlocked_short") : LocalizedStringKey("premium_locked_short"))
+                            .foregroundStyle(purchaseManager.isPremiumUnlocked ? .green : .secondary)
+                    }
+
+                    if !purchaseManager.isPremiumUnlocked {
+                        Button {
+                            showPremiumSheet = true
+                        } label: {
+                            Text(LocalizedStringKey("premium_unlock_button"))
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(Text("menu_settings"))
+        .sheet(isPresented: $showPremiumSheet) {
+            PremiumSheetView()
+        }
     }
 
     private var bugReportView: some View {
-        Text("Bug Report (em breve)")
-            .navigationTitle("Bug Report")
+        BugReportView()
     }
 
     private var archiveView: some View {
         List {
-            ForEach(store.quests.filter { $0.archived }) { quest in
+            ForEach(store.quests.filter { $0.archived && !$0.deleted }) { quest in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(quest.title)
                         .font(.headline)
@@ -308,9 +466,8 @@ struct ContentView: View {
                 // SWIPE ACTIONS
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
 
-                    // Delete permanentemente
                     Button(role: .destructive) {
-                        store.deleteQuest(quest.id)
+                        store.markDeleted(quest.id)
                     } label: {
                         Label("delete", systemImage: "trash")
                     }
@@ -329,59 +486,131 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Archive")
+        .navigationTitle(Text("menu_archive"))
+    }
+
+    private var deletedView: some View {
+        List {
+            let deletedQuests = store.quests.filter { $0.deleted }
+            if deletedQuests.isEmpty {
+                Text(LocalizedStringKey("deleted_empty"))
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(deletedQuests) { quest in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(quest.title)
+                            .font(.headline)
+
+                        Text(scheduleLabel(for: quest))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            store.permanentlyDeleteQuest(quest.id)
+                        } label: {
+                            Label("delete_permanently", systemImage: "trash.fill")
+                        }
+
+                        Button {
+                            store.restoreDeleted(quest.id)
+                        } label: {
+                            Label("restore", systemImage: "arrow.uturn.backward")
+                        }
+                        .tint(.green)
+                    }
+                }
+            }
+        }
+        .navigationTitle(Text("menu_deleted"))
     }
 
 
     
     private var homeView: some View {
         VStack(spacing: 12) {
+            if selectedHomeTab == .quests {
+                HStack(spacing: 16) {
+                    streakBadge(
+                        title: "daily_streak",
+                        count: dailyStreak,
+                        icon: "flame.fill",
+                        color: .orange
+                    )
 
-            // 🔥 STREAKS
-            HStack(spacing: 16) {
-                streakBadge(
-                    title: "daily_streak",
-                    count: dailyStreak,
-                    icon: "flame.fill",
-                    color: .orange
-                )
+                    streakBadge(
+                        title: "weekly_streak",
+                        count: weeklyStreak,
+                        icon: "bolt.fill",
+                        color: .purple
+                    )
+                }
+                .padding(.horizontal)
 
-                streakBadge(
-                    title: "weekly_streak",
-                    count: weeklyStreak,
-                    icon: "bolt.fill",
-                    color: .purple
-                )
-            }
-            .padding(.horizontal)
+                List {
+                    Section(header: sectionHeaderKey("daily_quests", isExpanded: $showDaily, type: .daily)) {
+                        if showDaily {
+                            if dailyQuests.isEmpty {
+                                Text(LocalizedStringKey("home_no_daily_quests"))
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(dailyQuests) { quest in
+                                    questRow(for: quest)
+                                }
+                            }
+                        }
+                    }
 
-            // 📜 QUEST LIST
-            List {
-                Section(header: sectionHeaderKey("daily_quests", isExpanded: $showDaily, type: .daily)) {
-                    if showDaily {
-                        ForEach(dailyQuests) { quest in
-                            questRow(for: quest)
+                    Section(header: sectionHeaderKey("weekly_quests", isExpanded: $showWeekly, type: .weekly)) {
+                        if showWeekly {
+                            if weeklyQuests.isEmpty {
+                                Text(LocalizedStringKey("home_no_weekly_quests"))
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(weeklyQuests) { quest in
+                                    questRow(for: quest)
+                                }
+                            }
+                        }
+                    }
+
+                    if dailyQuests.isEmpty && weeklyQuests.isEmpty {
+                        Section {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(LocalizedStringKey("home_no_quests_due"))
+                                    .foregroundStyle(.secondary)
+
+                                Button {
+                                    addQuestDefaultDate = Calendar.current.startOfDay(for: Date())
+                                    showAddQuest = true
+                                } label: {
+                                    Label(LocalizedStringKey("home_add_first_quest"), systemImage: "plus.circle.fill")
+                                }
+                            }
                         }
                     }
                 }
-
-                Section(header: sectionHeaderKey("weekly_quests", isExpanded: $showWeekly, type: .weekly)) {
-                    if showWeekly {
-                        ForEach(weeklyQuests) { quest in
-                            questRow(for: quest)
-                        }
-                    }
-                }
+                .listStyle(.insetGrouped)
+                .animation(.spring(), value: showDaily)
+                .animation(.spring(), value: showWeekly)
+            } else {
+                calendarPlannerView
             }
-            .listStyle(.insetGrouped)
-            .animation(.spring(), value: showDaily)
-            .animation(.spring(), value: showWeekly)
         }
         .navigationTitle(Text(NSLocalizedString("app_title", comment: "")))
         .toolbar {
-            Button { showAddQuest = true } label: {
+            Button {
+                addQuestDefaultDate = selectedHomeTab == .calendar
+                    ? Calendar.current.startOfDay(for: planningDate)
+                    : Calendar.current.startOfDay(for: Date())
+                showAddQuest = true
+            } label: {
                 Image(systemName: "plus")
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            homeBottomBar
         }
     }
 
@@ -390,13 +619,13 @@ struct ContentView: View {
 
     var dailyQuests: [AppQuest] {
         store.quests
-            .filter { $0.type == .daily && !$0.archived }
+            .filter { $0.type == .daily && !$0.archived && !$0.deleted && isQuestDueForHome($0) }
             .sorted { !$0.completed && $1.completed }
     }
 
     var weeklyQuests: [AppQuest] {
         store.quests
-            .filter { $0.type == .weekly && !$0.archived }
+            .filter { $0.type == .weekly && !$0.archived && !$0.deleted && isQuestDueForHome($0) }
             .sorted { !$0.completed && $1.completed }
     }
 
@@ -412,23 +641,37 @@ struct ContentView: View {
 
     // MARK: - Views
 
-    func questRow(for quest: AppQuest) -> some View {
+    func questRow(for quest: AppQuest, isInteractive: Bool = true) -> some View {
 
         HStack(spacing: 12) {
-            Image(systemName: quest.completed ? "checkmark.seal.fill" : "flame.fill")
+            Image(systemName: quest.completed ? "checkmark.seal.fill" : quest.icon.symbolName)
                 .foregroundColor(quest.completed ? .green : .orange)
                 .font(.title3)
 
-            Text(quest.title)
-                .fontWeight(.medium)
-                .strikethrough(quest.completed)
-                .foregroundColor(quest.completed ? .secondary : .primary)
-            
-            if !quest.notes.isEmpty {
-                Text(quest.notes)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(quest.title)
+                    .fontWeight(.medium)
+                    .strikethrough(quest.completed)
+                    .foregroundColor(quest.completed ? .secondary : .primary)
+
+                HStack(spacing: 8) {
+                    Text(scheduleLabel(for: quest))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    if quest.recurrence != .none {
+                        Label(quest.recurrence.localized, systemImage: "repeat")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if !quest.notes.isEmpty {
+                    Text(quest.notes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
             }
 
 
@@ -441,13 +684,14 @@ struct ContentView: View {
                 .shadow(radius: quest.completed ? 0 : 4)
         )
         .onTapGesture {
+            guard isInteractive else { return }
             withAnimation(.spring()) {
                 toggleQuest(quest)
             }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
-                store.deleteQuest(quest.id)
+                store.markDeleted(quest.id)
             } label: {
                 Label("delete", systemImage: "trash")
             }
@@ -461,6 +705,205 @@ struct ContentView: View {
         }
 
 
+    }
+
+    private var calendarPlannerView: some View {
+        List {
+            Section {
+                DatePicker(
+                    LocalizedStringKey("planner_selected_date"),
+                    selection: $planningDate,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+
+                weekIndicatorsView
+
+                Picker(LocalizedStringKey("planner_filter"), selection: $plannerFilter) {
+                    ForEach(PlannerFilter.allCases) { filter in
+                        Text(LocalizedStringKey(filter.rawValue)).tag(filter)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Button {
+                    addQuestDefaultDate = Calendar.current.startOfDay(for: planningDate)
+                    showAddQuest = true
+                } label: {
+                    Label(LocalizedStringKey("planner_add_for_date"), systemImage: "plus.circle.fill")
+                }
+            }
+
+            Section(header: Text(LocalizedStringKey("planner_quests_for_date"))) {
+                let dayQuests = quests(for: planningDate)
+
+                if dayQuests.isEmpty {
+                    Text(LocalizedStringKey("planner_no_quests_for_date"))
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(dayQuests) { quest in
+                        questRow(for: quest, isInteractive: isDateInPastOrToday(planningDate))
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    private var homeBottomBar: some View {
+        HStack(spacing: 12) {
+            homeTabButton(
+                titleKey: "home_tab_quests",
+                systemImage: "list.bullet",
+                tab: .quests
+            )
+
+            homeTabButton(
+                titleKey: "home_tab_calendar",
+                systemImage: "calendar",
+                tab: .calendar
+            )
+        }
+        .padding(10)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.horizontal)
+        .padding(.top, 8)
+    }
+
+    private var weekIndicatorsView: some View {
+        let days = weekDates(around: planningDate)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(LocalizedStringKey("planner_week_overview"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                ForEach(days, id: \.self) { day in
+                    let total = plannedQuestCount(on: day)
+                    let completed = completedQuestCount(on: day)
+                    let selected = Calendar.current.isDate(day, inSameDayAs: planningDate)
+                    Button {
+                        planningDate = Calendar.current.startOfDay(for: day)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(day, format: .dateTime.weekday(.narrow))
+                                .font(.caption2)
+                            Text(day, format: .dateTime.day())
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                            Text("\(completed)/\(total)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(selected ? Color.accentColor.opacity(0.2) : Color.clear)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func homeTabButton(titleKey: String, systemImage: String, tab: HomeTab) -> some View {
+        Button {
+            selectedHomeTab = tab
+            addQuestDefaultDate = tab == .calendar
+                ? Calendar.current.startOfDay(for: planningDate)
+                : Calendar.current.startOfDay(for: Date())
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                Text(LocalizedStringKey(titleKey))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(selectedHomeTab == tab ? Color.accentColor.opacity(0.2) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func scheduledDay(for quest: AppQuest) -> Date {
+        let timestamp = quest.scheduledDate ?? Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
+        return Calendar.current.startOfDay(for: Date(timeIntervalSince1970: timestamp))
+    }
+
+    private func weekDates(around date: Date) -> [Date] {
+        let calendar = Calendar.current
+        guard let interval = calendar.dateInterval(of: .weekOfYear, for: date) else {
+            return [calendar.startOfDay(for: date)]
+        }
+        return (0..<7).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: interval.start)
+        }
+    }
+
+    private func plannedQuestCount(on date: Date) -> Int {
+        let day = Calendar.current.startOfDay(for: date)
+        return store.quests.filter {
+            !$0.deleted && !$0.archived && Calendar.current.isDate(scheduledDay(for: $0), inSameDayAs: day)
+        }.count
+    }
+
+    private func completedQuestCount(on date: Date) -> Int {
+        let day = Calendar.current.startOfDay(for: date)
+        return store.quests.filter {
+            !$0.deleted && !$0.archived && $0.completed && Calendar.current.isDate(scheduledDay(for: $0), inSameDayAs: day)
+        }.count
+    }
+
+    private func scheduleLabel(for quest: AppQuest) -> String {
+        let day = scheduledDay(for: quest)
+        if Calendar.current.isDateInToday(day) {
+            return NSLocalizedString("quest_date_today", comment: "")
+        }
+        return DateFormatter.localizedString(from: day, dateStyle: .medium, timeStyle: .none)
+    }
+
+    private func isQuestDueForHome(_ quest: AppQuest) -> Bool {
+        let today = Calendar.current.startOfDay(for: Date())
+        return scheduledDay(for: quest) <= today
+    }
+
+    private func isDateInPastOrToday(_ date: Date) -> Bool {
+        Calendar.current.startOfDay(for: date) <= Calendar.current.startOfDay(for: Date())
+    }
+
+    private func quests(for date: Date) -> [AppQuest] {
+        let target = Calendar.current.startOfDay(for: date)
+        return store.quests
+            .filter { !$0.archived && !$0.deleted && Calendar.current.isDate(scheduledDay(for: $0), inSameDayAs: target) }
+            .filter { quest in
+                switch plannerFilter {
+                case .all:
+                    return true
+                case .daily:
+                    return quest.type == .daily
+                case .weekly:
+                    return quest.type == .weekly
+                case .pending:
+                    return !quest.completed
+                case .completed:
+                    return quest.completed
+                }
+            }
+            .sorted { left, right in
+                if left.completed != right.completed {
+                    return !left.completed && right.completed
+                }
+                if left.type != right.type {
+                    return left.type.rawValue < right.type.rawValue
+                }
+                return left.title.localizedCaseInsensitiveCompare(right.title) == .orderedAscending
+            }
     }
 
 
@@ -514,6 +957,7 @@ struct ContentView: View {
         for index in store.quests.indices {
             guard store.quests[index].completed,
                   let completedAt = store.quests[index].completedAt,
+                  !store.quests[index].deleted,
                   !store.quests[index].archived
             else { continue }
 
@@ -552,7 +996,9 @@ struct ContentView: View {
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
-        switch quest.type {
+        guard let updatedQuest = store.quests.first(where: { $0.id == quest.id }) else { return }
+
+        switch updatedQuest.type {
         case .daily:
             if dailyCompleted {
                 if !alreadyCountedDailyToday() {
@@ -574,6 +1020,31 @@ struct ContentView: View {
                 rollbackWeeklyIfNeeded()
             }
         }
+
+        if updatedQuest.completed && updatedQuest.recurrence != .none {
+            autoReschedule(quest: updatedQuest)
+        }
+    }
+
+    private func autoReschedule(quest: AppQuest) {
+        let current = scheduledDay(for: quest)
+        let base = max(current, Calendar.current.startOfDay(for: Date()))
+        let nextDate: Date
+
+        switch quest.recurrence {
+        case .daily:
+            nextDate = Calendar.current.date(byAdding: .day, value: 1, to: base) ?? base
+        case .weekly:
+            nextDate = Calendar.current.date(byAdding: .day, value: 7, to: base) ?? base
+        case .none:
+            return
+        }
+
+        var moved = quest
+        moved.scheduledDate = Calendar.current.startOfDay(for: nextDate).timeIntervalSince1970
+        moved.completed = false
+        moved.completedAt = nil
+        store.update(moved)
     }
 
 
@@ -596,7 +1067,7 @@ struct ContentView: View {
     }
 
     func progress(for type: QuestType) -> Double {
-        let filtered = store.quests.filter { $0.type == type && !$0.archived }
+        let filtered = store.quests.filter { $0.type == type && !$0.archived && !$0.deleted && isQuestDueForHome($0) }
         guard !filtered.isEmpty else { return 0 }
         let completed = filtered.filter { $0.completed }.count
         return Double(completed) / Double(filtered.count)
@@ -722,49 +1193,6 @@ struct ContentView: View {
 
 }
 
-struct AddQuestView: View {
-
-    @Environment(\.dismiss) var dismiss
-
-    @State private var title = ""
-    @State private var type: QuestType = .daily
-
-    var onAdd: (AppQuest) -> Void
-
-    var body: some View {
-        NavigationView {
-            Form {
-                TextField(LocalizedStringKey("quest_title_placeholder"), text: $title)
-
-
-                Picker(LocalizedStringKey("quest_type"), selection: $type) {
-                    ForEach(QuestType.allCases) { type in
-                        Text(type.localized).tag(type)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-            .navigationTitle(Text("new_quest"))
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(LocalizedStringKey("add")) {
-                        onAdd(AppQuest(title: title, type: type))
-                        dismiss()
-                    }
-                    .disabled(title.isEmpty)
-                }
-
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(LocalizedStringKey("cancel")) {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-
 struct CelebrationView: View {
 
     var titleKey: String
@@ -806,4 +1234,3 @@ struct CelebrationView: View {
         }
     }
 }
-

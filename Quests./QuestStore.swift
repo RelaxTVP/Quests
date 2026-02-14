@@ -40,11 +40,34 @@ final class QuestStore {
     func delete(_ offsets: IndexSet, type: QuestType) {
         let filtered = quests.enumerated().filter { $0.element.type == type }
         for offset in offsets {
-            quests.remove(at: filtered[offset].offset)
+            let idx = filtered[offset].offset
+            quests[idx].deleted = true
+            quests[idx].archived = false
+            quests[idx].completed = false
+            quests[idx].completedAt = nil
         }
         save()
     }
     func deleteQuest(_ id: UUID) {
+        markDeleted(id)
+    }
+
+    func markDeleted(_ id: UUID) {
+        guard let idx = quests.firstIndex(where: { $0.id == id }) else { return }
+        quests[idx].deleted = true
+        quests[idx].archived = false
+        quests[idx].completed = false
+        quests[idx].completedAt = nil
+        save()
+    }
+
+    func restoreDeleted(_ id: UUID) {
+        guard let idx = quests.firstIndex(where: { $0.id == id }) else { return }
+        quests[idx].deleted = false
+        save()
+    }
+
+    func permanentlyDeleteQuest(_ id: UUID) {
         quests.removeAll { $0.id == id }
         save()
     }
@@ -62,6 +85,7 @@ final class QuestStore {
         do {
             let data = try Data(contentsOf: fileURL)
             quests = try JSONDecoder().decode([AppQuest].self, from: data)
+            QuestNotificationManager.refresh(for: quests)
         } catch {
             print("Load error:", error.localizedDescription)
             quests = []
@@ -72,6 +96,7 @@ final class QuestStore {
         do {
             let data = try JSONEncoder().encode(quests)
             try data.write(to: fileURL, options: [.atomic])
+            QuestNotificationManager.refresh(for: quests)
         } catch {
             print("Save error:", error.localizedDescription)
         }

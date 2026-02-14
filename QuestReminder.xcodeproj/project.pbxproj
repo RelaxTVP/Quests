@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		47F1F2772F3BA456006BBFE6 /* Quests..app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Quests..app; sourceTree = BUILT_PRODUCTS_DIR; };
+		47F1F2772F3BA456006BBFE6 /* QuestReminder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuestReminder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		47F1F2782F3BA456006BBFE6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				47F1F2772F3BA456006BBFE6 /* Quests..app */,
+				47F1F2772F3BA456006BBFE6 /* QuestReminder.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		47F1F2762F3BA456006BBFE6 /* Quests. */ = {
+		47F1F2762F3BA456006BBFE6 /* QuestReminder */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 47F1F2822F3BA457006BBFE6 /* Build configuration list for PBXNativeTarget "Quests." */;
+			buildConfigurationList = 47F1F2822F3BA457006BBFE6 /* Build configuration list for PBXNativeTarget "QuestReminder" */;
 			buildPhases = (
 				47F1F2732F3BA456006BBFE6 /* Sources */,
 				47F1F2742F3BA456006BBFE6 /* Frameworks */,
@@ -63,11 +63,11 @@
 			fileSystemSynchronizedGroups = (
 				47F1F2792F3BA456006BBFE6 /* Quests. */,
 			);
-			name = Quests.;
+			name = QuestReminder;
 			packageProductDependencies = (
 			);
 			productName = QuestReminder;
-			productReference = 47F1F2772F3BA456006BBFE6 /* Quests..app */;
+			productReference = 47F1F2772F3BA456006BBFE6 /* QuestReminder.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 47F1F2722F3BA456006BBFE6 /* Build configuration list for PBXProject "Quests." */;
+			buildConfigurationList = 47F1F2722F3BA456006BBFE6 /* Build configuration list for PBXProject "QuestReminder" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -100,7 +100,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				47F1F2762F3BA456006BBFE6 /* Quests. */,
+				47F1F2762F3BA456006BBFE6 /* QuestReminder */,
 			);
 		};
 /* End PBXProject section */
@@ -178,7 +178,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -236,7 +236,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -326,7 +326,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		47F1F2722F3BA456006BBFE6 /* Build configuration list for PBXProject "Quests." */ = {
+		47F1F2722F3BA456006BBFE6 /* Build configuration list for PBXProject "QuestReminder" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				47F1F2802F3BA457006BBFE6 /* Debug */,
@@ -335,7 +335,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		47F1F2822F3BA457006BBFE6 /* Build configuration list for PBXNativeTarget "Quests." */ = {
+		47F1F2822F3BA457006BBFE6 /* Build configuration list for PBXNativeTarget "QuestReminder" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				47F1F2832F3BA457006BBFE6 /* Debug */,

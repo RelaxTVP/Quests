@@ -1,0 +1,43 @@
+{
+  "identifier" : "B8DAD90A-2D0D-4E14-90B4-E78B2A95F5D5",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "3.99",
+      "familyShareable" : false,
+      "internalID" : "5E11267A-8F6F-4D5E-904F-E0C6C2D78A2A",
+      "localizations" : [
+        {
+          "description" : "Unlock premium forever with a single purchase.",
+          "displayName" : "QuestReminder Lifetime",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Desbloqueia premium para sempre com uma compra única.",
+          "displayName" : "QuestReminder Vitalício",
+          "locale" : "pt_PT"
+        }
+      ],
+      "productID" : "com.miguel.questapp.lifetime",
+      "referenceName" : "Lifetime Premium",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "7DB4F087-C1F6-4E88-8A9D-6AB7A4FC6A4E",
+    "_developerTeamID" : "GL4MZCC3GZ",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_timeRate" : 0,
+    "storefront" : "USA"
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
+
